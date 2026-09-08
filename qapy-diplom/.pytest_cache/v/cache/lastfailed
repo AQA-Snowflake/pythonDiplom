@@ -1,0 +1,8 @@
+{
+  "tests/test_payment.py::TestPayment::test_successful_debit_payment": true,
+  "tests/test_payment.py::TestPayment::test_declined_debit_payment": true,
+  "tests/test_payment.py::TestPayment::test_invalid_card_number_format": true,
+  "tests/test_payment.py::TestPayment::test_invalid_month_13": true,
+  "tests/test_payment.py::TestPayment::test_empty_card_number": true,
+  "tests/test_payment.py::TestPayment::test_invalid_card_number_too_short": true
+}
