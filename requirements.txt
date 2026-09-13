@@ -1,4 +1,0 @@
-selenium==4.18.1
-pytest==8.0.2
-allure-pytest==2.13.2
-pymysql==1.1.0
