@@ -1,0 +1,52 @@
+# created by virtualenv automatically
+# Виртуальное окружение
+.venv/
+venv/
+env/
+ENV/
+env*/
+
+# Кэш Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Результаты тестов (Allure)
+allure-results/
+allure-report/
+*/allure-results/
+
+# База данных (если локальная)
+db/
+*.db
+*.sqlite3
+*.sqlite
+
+# Логи
+*.log
+
+# Файлы IDE
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Бинарные артефакты (JAR, WAR и т.п.)
+*.jar
+*.war
+*.ear
+
+# Конфигурация с секретами (опционально)
+utils/application.properties
+utils/aqa-shop.jar
+
+# Отчёты тестов (HTML, Allure, etc.)
+**/logs/
+*.html
