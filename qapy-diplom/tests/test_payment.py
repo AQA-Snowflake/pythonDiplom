@@ -17,6 +17,7 @@ import allure
 from datetime import datetime
 from pages.purchase_page import PurchasePage
 from db.db_client import DBClient
+pytestmark = [allure.suite("Тесты оплаты")]
 
 # Вспомогательные функции
 
