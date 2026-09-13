@@ -41,13 +41,22 @@ class PurchasePage:
         self.driver.find_element(By.XPATH, '//input[@placeholder="999"]').send_keys(cvc)
 
     """Отправка формы"""
+    # def submit_form(self, timeout=10):
+    #     # ищем кнопку по тексту "Продолжить"
+    #     submit_btn = WebDriverWait(self.driver, 17).until(
+    #         EC.element_to_be_clickable((By.XPATH,
+    #         '//button[text()="Продолжить"]'))
+    #     )
+    #     submit_btn.click()
+
     def submit_form(self):
-        # ищем кнопку по тексту "Продолжить"
-        submit_btn = WebDriverWait(self.driver, 17).until(
-            EC.element_to_be_clickable((By.XPATH,
-            '//button[text()="Продолжить"]'))
-        )
-        submit_btn.click()
+        btn = self.wait.until(EC.presence_of_element_located(
+            (By.XPATH, '//button[contains(normalize-space(.), "Продолжить")]')
+        ))
+        self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", btn)
+        self.wait.until(EC.element_to_be_clickable(
+            (By.XPATH, '//button[contains(normalize-space(.), "Продолжить")]')
+        )).click()
 
     def get_notification_text(self):
         try:

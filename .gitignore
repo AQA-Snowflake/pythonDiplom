@@ -18,7 +18,7 @@ allure-report/
 */allure-results/
 
 # База данных (если локальная)
-db/
+# Внимание: НЕ игнорировать папку db/ с кодом db_client.py!
 *.db
 *.sqlite3
 *.sqlite
