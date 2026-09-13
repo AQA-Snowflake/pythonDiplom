@@ -1,0 +1,130 @@
+name: Allure Report to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: app
+          MYSQL_USER: app
+          MYSQL_PASSWORD: pass
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Setup ChromeDriver
+        uses: nanasess/setup-chromedriver@v2
+
+      - name: Install Allure CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre wget
+          wget -q https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
+          tar -zxf allure-2.27.0.tgz
+          sudo mv allure-2.27.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+          allure --version
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r qapy-diplom/requirements.txt
+          pip install allure-pytest
+          
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if (echo > /dev/tcp/127.0.0.1/3307) 2>/dev/null; then
+              echo "MySQL port 3307 is open"; break
+            fi
+            echo "Waiting for MySQL... ($i)"; sleep 3
+          done
+          sleep 5
+
+      - name: Start gate-simulator
+        working-directory: qapy-diplom/gate-simulator
+        run: |
+          npm install
+          nohup node app.js > /tmp/gate-simulator.log 2>&1 &
+          sleep 5
+          cat /tmp/gate-simulator.log
+          curl -s -o /dev/null -w "Gate HTTP: %{http_code}\n" -X POST http://localhost:9999/payment -H "Content-Type: application/json" -d '{"number":"4444 4444 4444 4441"}' || true
+
+      - name: Start aqa-shop
+        working-directory: qapy-diplom
+        run: |
+          nohup java -jar aqa-shop.jar > /tmp/aqa-shop.log 2>&1 &
+          for i in {1..30}; do
+            if curl -s http://localhost:8080 > /dev/null; then
+              echo "aqa-shop is up"; break
+            fi
+            echo "Waiting for aqa-shop... ($i)"; sleep 2
+          done
+          cat /tmp/aqa-shop.log
+
+      - name: Run tests
+        working-directory: qapy-diplom
+        env:
+          CI: "true"
+        run: pytest --alluredir=allure-results
+        continue-on-error: true
+
+      - name: Load previous Allure history
+        uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Build Allure report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        with:
+          gh_pages: gh-pages
+          allure_results: qapy-diplom/allure-results
+          allure_history: allure-history
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
