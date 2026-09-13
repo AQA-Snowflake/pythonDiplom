@@ -43,7 +43,7 @@ class PurchasePage:
     """Отправка формы"""
     def submit_form(self):
         # ищем кнопку по тексту "Продолжить"
-        submit_btn = WebDriverWait(self.driver, 7).until(
+        submit_btn = WebDriverWait(self.driver, 17).until(
             EC.element_to_be_clickable((By.XPATH,
             '//button[text()="Продолжить"]'))
         )
