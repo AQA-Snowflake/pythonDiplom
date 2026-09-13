@@ -1,3 +1,4 @@
+import time
 import pymysql
 
 class DBClient:
@@ -26,5 +27,27 @@ class DBClient:
             cursor.execute(sql)
             return cursor.fetchone()
 
+    def wait_for_last_payment(self, timeout: int = 10, poll_interval: float = 0.5):
+        """
+        Ждёт появления записи в payment_entity.
+        Возвращает последнюю запись или None, если за timeout ничего не появилось.
+        """
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            row = self.get_last_payment()
+            if row is not None:
+                return row
+            time.sleep(poll_interval)
+        return None
+
     def close(self):
-        self.connection.close()
+        if self.connection is not None:
+            self.connection.close()
+            self.connection = None
+
+    # Позволяет использовать `with DBClient() as db:` и автоматически закрывать соединение
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

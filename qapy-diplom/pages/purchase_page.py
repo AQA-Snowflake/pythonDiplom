@@ -107,21 +107,14 @@ class PurchasePage:
             return ""
 
     def get_field_error(self, field_name):
+        xpath = (
+            f'//span[contains(@class,"input__top") and normalize-space()="{field_name}"]'
+            f'/following-sibling::span[contains(@class,"input__sub")]'
+        )
         try:
             error = WebDriverWait(self.driver, 5).until(
-                EC.visibility_of_element_located((By.XPATH,
-                                                  f'//span[contains(@class,"input__top") and text()="{field_name}"]/following-sibling::span[@class="input__sub"]'))
+                EC.visibility_of_element_located((By.XPATH, xpath))
             )
             return error.text
-        except:
+        except Exception:
             return ""
-
-    # def get_field_error(self, field_name):
-    #     """Возвращает текст ошибки для поля по его названию (видимому label)."""
-    #     try:
-    #         # Ищем элемент ошибки, связанный с полем
-    #         error = self.driver.find_element(By.XPATH,
-    #                                          f'//span[contains(@class,"input__top") and text()="{field_name}"]/following-sibling::span[@class="input__sub"]')
-    #         return error.text
-    #     except:
-    #         return ""
