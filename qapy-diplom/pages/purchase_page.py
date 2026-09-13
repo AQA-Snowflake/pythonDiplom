@@ -78,17 +78,6 @@ class PurchasePage:
     def is_credit_page_opened(self):
         return "credit" in self.driver.current_url.lower() or "кредит" in self.driver.page_source
 
-    def is_form_submitted(self):
-        """Проверим, появилось ли уведомление (успех/ошибка) после отправки."""
-        try:
-            self.wait.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR,
-                    ".notification_notification_status_ok, .notification_notification_status_error"))
-            )
-            return True
-        except:
-            return False
-
     def check_price_info_displayed(self):
         """Проверим наличие информации о цене, милях и проценте."""
         try:
@@ -115,7 +104,8 @@ class PurchasePage:
         except:
             return ""
 
-    def get_field_error(self, field_name):
+    def get_field_error(self, field_name: str) -> str:
+        """Возвращает текст ошибки под конкретным полем или пустую строку."""
         xpath = (
             f'//span[contains(@class,"input__top") and normalize-space()="{field_name}"]'
             f'/following-sibling::span[contains(@class,"input__sub")]'
@@ -125,5 +115,17 @@ class PurchasePage:
                 EC.visibility_of_element_located((By.XPATH, xpath))
             )
             return error.text
-        except Exception:
+        except Exception as exc:
+            print(f"[get_field_error] Не нашли ошибку для '{field_name}': {exc}")
             return ""
+
+    def is_form_submitted(self):
+        """Проверим, появилось ли уведомление (успех/ошибка) после отправки."""
+        try:
+            self.wait.until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR,
+                    ".notification_notification_status_ok, .notification_notification_status_error"))
+            )
+            return True
+        except:
+            return False

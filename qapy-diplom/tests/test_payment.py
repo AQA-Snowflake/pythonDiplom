@@ -13,6 +13,7 @@
 """
 
 import pytest
+import allure
 from datetime import datetime
 from pages.purchase_page import PurchasePage
 from db.db_client import DBClient
@@ -32,6 +33,8 @@ def future_year(years_ahead: int = 4) -> str:
 CARD_APPROVED = "4444 4444 4444 4441"   # успешная оплата
 CARD_DECLINED = "4444 4444 4444 4442"   # банк отклоняет
 
+@allure.epic("Путешествие дня")
+@allure.feature("Форма оплаты")
 @pytest.mark.usefixtures("driver")
 class TestPayment:
     """
@@ -41,16 +44,10 @@ class TestPayment:
     """
 
     # P001: Проверка успешного платежа дебетовой картой с проверкой уведомлений в БД
-    def test_successful_debit_payment(self, driver):
-        """
-        Проверяем полный happy path:
-        1. Открываем страницу и жмём "Купить".
-        2. Заполняем форму валидными данными с APPROVED-картой.
-        3. Отправляем форму.
-        4. Ждём уведомление об успехе на UI.
-        5. Проверяем, что в БД последний платёж имеет статус APPROVED.
-        """
-        page = PurchasePage(driver)
+    @allure.title("Успешная оплата дебетовой картой")
+    @allure.description("Проверяет полный happy path: заполнение формы валидными данными, отправка, успешное уведомление на UI и статус APPROVED в БД.")
+    def test_successful_debit_payment(self, driver, base_url):
+        page = PurchasePage(driver, base_url=base_url)
         page.open()
         page.click_buy_button()
         # Валидный номер карты (approved) из data.json
@@ -70,18 +67,20 @@ class TestPayment:
                 f"Ожидался статус APPROVED, получили {last_payment['status']!r}"
 
     # P002: Валидация номера карты
-    def test_valid_card_number_format(self, driver):
-        """Корректный 16-значный номер не вызывает ошибок валидации."""
-        page = PurchasePage(driver)
+    @allure.title("Валидация: Корректный формат номера карты 16-значный")
+    def test_valid_card_number_format(self, driver, base_url):
+        page = PurchasePage(driver, base_url=base_url)
         page.open()
         page.click_buy_button()
         page.fill_card_fields(CARD_APPROVED, "12", future_year(), "Valeria Petrovna", "123")
-        assert not page.has_field_errors(), "Есть ошибки валидации при корректном номере"
+        # Проверяем отсутствие ошибки именно под полем «Номер карты»
+        error = page.get_field_error("Номер карты")
+        assert error == "", f"Ожидалось отсутствие ошибки, получили: {error!r}"
         value = page.get_field_value("0000 0000 0000 0000")
         assert len(value.replace(" ", "")) == 16, "Номер должен содержать 16 цифр"
 
+    @allure.title("Валидация: Слишком короткий номер карты")
     def test_invalid_card_number_too_short(self, driver):
-        """Слишком короткий номер подсвечивается ошибкой 'Неверный формат'."""
         page = PurchasePage(driver)
         page.open()
         page.click_buy_button()
@@ -91,8 +90,8 @@ class TestPayment:
         assert "Неверный формат" in error or "заполнено" in error, \
             f"Ожидалась ошибка формата, получили: {error!r}"
 
+    @allure.title("Валидация: Пустое поле номера карты")
     def test_empty_card_number(self, driver):
-        """Пустое поле номера карты — форма не отправляется, есть ошибка."""
         page = PurchasePage(driver)
         page.open()
         page.click_buy_button()
@@ -103,8 +102,8 @@ class TestPayment:
         assert "Неверный формат" in error
 
     # P003: Валидация месяца, года
+    @allure.title("Валидация: Корректный месяц (09)")
     def test_valid_month(self, driver):
-        """Корректный месяц (09) проходит валидацию."""
         page = PurchasePage(driver)
         page.open()
         page.click_buy_button()
@@ -114,8 +113,8 @@ class TestPayment:
         value = page.get_field_value("08")
         assert value == "09"
 
+    @allure.title("Валидация: Несуществующий месяц (13)")
     def test_invalid_month_13(self, driver):
-        """Месяц 13 не существует — должна быть ошибка."""
         page = PurchasePage(driver)
         page.open()
         page.click_buy_button()
@@ -126,13 +125,10 @@ class TestPayment:
         assert "Неверно указан срок" in error or "срок действия" in error, \
             f"Ожидалась ошибка месяца, получили: {error!r}"
 
-    def test_expired_card_year(self, driver):
-        """
-        Проверяем, что карта с прошедшим годом не проходит валидацию.
-        Ожидаем ошибку 'Истёк срок действия карты'
-        (или похожую) под полем 'Год'.
-        """
-        page = PurchasePage(driver)
+    @allure.title("Валидация: Просроченный год карты")
+    def test_expired_card_year(self, driver, base_url):
+        """ Ожидаем ошибку 'Истёк срок действия карты' (или похожую) """
+        page = PurchasePage(driver, base_url=base_url)
         page.open()
         page.click_buy_button()
         # Год на 1 меньше текущего (то есть, просрочен точно)
@@ -147,8 +143,8 @@ class TestPayment:
         assert not page.is_form_submitted(), "Форма отправилась с просроченной картой"
 
     # P004: Валидация владельца
+    @allure.title("Валидация: Корректный владелец (латиница)")
     def test_valid_owner(self, driver):
-        """Латиница в поле 'Владелец' сохраняется без ошибок."""
         page = PurchasePage(driver)
         page.open()
         page.click_buy_button()
@@ -157,7 +153,7 @@ class TestPayment:
         assert not page.has_field_errors(), "Есть ошибки валидации при корректном владельце"
         assert page.get_owner_value() == "Valeria Petrovna"
 
-
+    @allure.title("Баг: Поле 'Владелец' пропускает кириллицу")
     @pytest.mark.xfail(reason="Баг: поле Владелец пропускает кириллицу")
     def test_invalid_owner_cyrillic(self, driver):
         """Кириллица в поле 'Владелец' должна отклоняться — сейчас пропускается."""
@@ -171,8 +167,8 @@ class TestPayment:
         assert "латинские" in error or "неверный" in error
 
     # P005: Валидация CVC
+    @allure.title("Валидация: Корректный CVC")
     def test_valid_cvc(self, driver):
-        """Корректный CVC из 3 цифр проходит валидацию."""
         page = PurchasePage(driver)
         page.open()
         page.click_buy_button()
@@ -183,6 +179,7 @@ class TestPayment:
         assert page.get_field_value("999") == "567"
 
 
+    @allure.title("Баг: Валидация CVC не проверяет длину")
     @pytest.mark.xfail(reason="Баг: валидация CVC не проверяет длину")
     # декоратор
     def test_invalid_cvc_too_short(self, driver):
@@ -197,6 +194,7 @@ class TestPayment:
         assert "заполнено" in error or "3 цифры" in error
 
     # P006: Отклоненная оплата
+    @allure.title("Отклоненная оплата дебетовой картой")
     def test_declined_debit_payment(self, driver):
         """Карта DECLINED - на UI ошибка, в БД статус DECLINED."""
         page = PurchasePage(driver)
@@ -217,6 +215,7 @@ class TestPayment:
                 f"Ожидался статус DECLINED, получили {last_payment['status']!r}"
 
     # P007: Кнопка "Купить в кредит"
+    @allure.title("Переключение на вкладку 'Купить в кредит'")
     def test_credit_button(self, driver):
         """Нажатие на 'Купить в кредит' открывает страницу кредита."""
         page = PurchasePage(driver)
@@ -226,8 +225,8 @@ class TestPayment:
         assert page.is_credit_page_opened(), "Страница кредита не открылась"
 
     # P008: Отображение цены, миль, процентов
+    @allure.title("Отображение цены, миль и процентов кешбэка")
     def test_price_info_displayed(self, driver):
-        """На главной странице видны цена, мили и процент кешбэка."""
         page = PurchasePage(driver)
         page.open()
 

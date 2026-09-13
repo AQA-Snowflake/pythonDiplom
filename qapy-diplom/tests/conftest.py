@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
 IS_CI = bool(os.getenv("CI"))
-
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8080")
 
 @pytest.fixture(scope="function")
 def driver():
@@ -47,4 +47,4 @@ def driver():
 
 @pytest.fixture(scope="session")
 def base_url():
-    return "http://localhost:8080"
+    return BASE_URL
