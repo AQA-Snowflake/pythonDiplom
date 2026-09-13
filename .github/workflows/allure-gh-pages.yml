@@ -38,7 +38,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -120,6 +120,7 @@ jobs:
           gh_pages: gh-pages
           allure_results: qapy-diplom/allure-results
           allure_history: allure-history
+          allure_report: allure-history
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
