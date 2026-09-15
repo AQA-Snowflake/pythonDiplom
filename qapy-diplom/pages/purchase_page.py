@@ -63,7 +63,7 @@ class PurchasePage:
             # Ищем уведомление по классам
             notification = WebDriverWait(self.driver, 8).until(
                 EC.visibility_of_element_located((By.CSS_SELECTOR,
-                    ".notification_notification_status_ok, .notification_notification_status_error"))
+                    ".notification_status_ok, .notification_status_error"))
             )
             return notification.text
         except:
@@ -124,8 +124,25 @@ class PurchasePage:
         try:
             self.wait.until(
                 EC.visibility_of_element_located((By.CSS_SELECTOR,
-                    ".notification_notification_status_ok, .notification_notification_status_error"))
+                    ".notification_status_ok, .notification_status_error"))
             )
             return True
         except:
             return False
+
+        # --- Добавлено: точечные ожидания уведомлений ---
+    def wait_for_success_notification(self, timeout=10):
+        """Ждёт уведомление об успехе (.notification_status_ok) и возвращает его текст."""
+        notification = WebDriverWait(self.driver, timeout).until(
+            EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, ".notification_status_ok"))
+        )
+        return notification.text.strip()
+
+    def wait_for_error_notification(self, timeout=10):
+        """Ждёт уведомление об ошибке (.notification_status_error) и возвращает его текст."""
+        notification = WebDriverWait(self.driver, timeout).until(
+            EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, ".notification_status_error"))
+        )
+        return notification.text.strip()
