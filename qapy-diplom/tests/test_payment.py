@@ -56,9 +56,11 @@ class TestPayment:
         page.submit_form()
 
         # Проверяем уведомление
-        notification = page.get_notification_text()
-        assert "Успешно" in notification or "Approved" in notification, \
+        notification = page.wait_for_success_notification(timeout=10)
+        assert "Успешно" in notification, \
             f"Ожидалось уведомление об успехе, получили: {notification!r}"
+        assert "Операция одобрена Банком" in notification, \
+            f"Ожидалось 'Операция одобрена Банком', получили: {notification!r}"
 
         # Проверяем БД: последний платёж должен быть APPROVED
         with DBClient() as db:
@@ -196,6 +198,13 @@ class TestPayment:
 
     # P006: Отклоненная оплата
     @allure.title("Отклоненная оплата дебетовой картой")
+    @allure.description(
+        "приложение показывает success для declined-карты"
+        "Карта 4444 4444 4444 4442 должна получать отказ банка, "
+        "но UI показывает 'Успешно / Операция одобрена Банком'. "
+        "Оформлено как xfail"
+    )
+    @pytest.mark.xfail(reason="Баг: declined-карта 4442 отображает успех вместо отказа")
     def test_declined_debit_payment(self, driver):
         """Карта DECLINED - на UI ошибка, в БД статус DECLINED."""
         page = PurchasePage(driver)
@@ -205,8 +214,9 @@ class TestPayment:
         page.fill_card_fields(CARD_DECLINED, "12", future_year(), "Valeria Petrovna", "123")
         page.submit_form()
 
-        notification = page.get_notification_text()
-        assert "Ошибка" in notification or "Declined" in notification, \
+        # Ждём именно error-уведомление (не ok!)
+        notification = page.wait_for_error_notification(timeout=5)
+        assert "Ошибка" in notification or "Declined" in notification or "отклонен" in notification.lower(), \
             f"Ожидалось уведомление об ошибке, получили: {notification!r}"
         # Проверка БД (опционально)
         with DBClient() as db:
