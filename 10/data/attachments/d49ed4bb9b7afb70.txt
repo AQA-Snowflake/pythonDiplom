@@ -1,0 +1,21 @@
+[get_field_error] Не нашли ошибку для 'Владелец': Message: 
+Stacktrace:
+#0 0x55b59788e03a <unknown>
+#1 0x55b5971f64c9 <unknown>
+#2 0x55b59724c242 <unknown>
+#3 0x55b59724c4a1 <unknown>
+#4 0x55b597297394 <unknown>
+#5 0x55b5972945ad <unknown>
+#6 0x55b59723f83b <unknown>
+#7 0x55b597240621 <unknown>
+#8 0x55b5978525f0 <unknown>
+#9 0x55b597850c6a <unknown>
+#10 0x55b59783b9f5 <unknown>
+#11 0x55b59785192a <unknown>
+#12 0x55b597824d10 <unknown>
+#13 0x55b597879158 <unknown>
+#14 0x55b5978792f5 <unknown>
+#15 0x55b59788cbc3 <unknown>
+#16 0x7f768989cb84 <unknown>
+#17 0x7f7689929d6c <unknown>
+
