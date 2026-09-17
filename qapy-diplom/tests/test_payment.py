@@ -188,20 +188,24 @@ class TestPayment:
         assert not page.has_field_errors(), "Есть ошибки валидации при корректных данных cvc"
         assert page.get_field_value("999") == "567"
 
-
-    @allure.title("Валидация CVC не проверяет длину")
-    @pytest.mark.xfail(reason="валидация CVC не проверяет длину")
-    # декоратор
-    def test_invalid_cvc_too_short(self, driver):
-        """CVC из 2 цифр должен отклоняться — сейчас пропускается."""
-        page = PurchasePage(driver)
+    @pytest.mark.parametrize("pay_type", ["debit", "credit"])
+    @allure.title("Валидация: CVC из 2 цифр отклоняется ({pay_type})")
+    @allure.description(
+        "Проверяет что приложение корректно отклоняет CVC длиной 2 цифры с сообщением "
+        "'Неверный формат'. Форма не должна отправляться."
+    )
+    def test_invalid_cvc_too_short(self, driver, base_url, pay_type):
+        """CVC из 2 цифр должен отклоняться с сообщением 'Неверный формат'."""
+        page = PurchasePage(driver, base_url=base_url)
         page.open()
-        page.click_buy_button()
-
+        page.select_payment_type(pay_type)
         page.fill_card_fields(CARD_APPROVED, "12", future_year(), "Valeria Petrovna", "12")
         page.submit_form()
-        error = page.get_field_error("CVC")
-        assert "заполнено" in error or "3 цифры" in error
+        error = page.get_field_error("CVC/CVV")
+        assert "Неверный формат" in error, \
+            f"[{pay_type}] Ожидалась ошибка формата, получили: {error!r}"
+        assert not page.is_form_submitted(), \
+            f"[{pay_type}] Форма отправилась с CVC из 2 цифр — валидация не работает"
 
     # P006: Отклоненная оплата
     @pytest.mark.parametrize("pay_type", ["debit", "credit"])
