@@ -31,6 +31,17 @@ class PurchasePage:
         )
         credit_btn.click()
 
+    def select_payment_type(self, pay_type: str):
+        """
+        Универсальный выбор вкладки.
+        pay_type: 'debit' → «Купить», 'credit' → «Купить в кредит».
+        Нужен, чтобы не писать if/else в каждом кейсе.
+        """
+        if pay_type == "credit":
+            self.click_credit_button()
+        else:
+            self.click_buy_button()
+
     def fill_card_fields(self, number, month, year, owner, cvc):
         # Используем ваши локаторы
         self.driver.find_element(By.XPATH, '//input[@placeholder="0000 0000 0000 0000"]').send_keys(number)
