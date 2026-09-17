@@ -42,14 +42,14 @@ class DBClient:
         return None
 
     def get_last_credit(self):
-        """Последняя запись из credit_entity (отдельная таблица для кредитов)."""
+        """Последняя запись из credit_request_entity (отдельная таблица для кредитов)."""
         with self.connection.cursor() as cursor:
-            sql = "SELECT * FROM credit_entity ORDER BY created DESC LIMIT 1"
+            sql = "SELECT * FROM credit_request_entity ORDER BY created DESC LIMIT 1"
             cursor.execute(sql)
             return cursor.fetchone()
 
     def wait_for_last_credit(self, timeout: int = 10, poll_interval: float = 0.5):
-        """Ждёт появления записи в credit_entity (аналог wait_for_last_payment)."""
+        """Ждёт появления записи в credit_request_entity (аналог wait_for_last_payment)."""
         deadline = time.time() + timeout
         while time.time() < deadline:
             row = self.get_last_credit()
