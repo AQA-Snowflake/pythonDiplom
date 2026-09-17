@@ -29,7 +29,8 @@ class DBClient:
 
     def wait_for_last_payment(self, timeout: int = 10, poll_interval: float = 0.5):
         """
-        Ждёт появления записи в payment_entity.
+        Ждёт появления записи в debit - payment_entity (дебетовые операции).
+        Для кредитов используйте wait_for_last_credit / wait_for_last_operation.
         Возвращает последнюю запись или None, если за timeout ничего не появилось.
         """
         deadline = time.time() + timeout
@@ -39,6 +40,32 @@ class DBClient:
                 return row
             time.sleep(poll_interval)
         return None
+
+    def get_last_credit(self):
+        """Последняя запись из credit_entity (отдельная таблица для кредитов)."""
+        with self.connection.cursor() as cursor:
+            sql = "SELECT * FROM credit_entity ORDER BY created DESC LIMIT 1"
+            cursor.execute(sql)
+            return cursor.fetchone()
+
+    def wait_for_last_credit(self, timeout: int = 10, poll_interval: float = 0.5):
+        """Ждёт появления записи в credit_entity (аналог wait_for_last_payment)."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            row = self.get_last_credit()
+            if row is not None:
+                return row
+            time.sleep(poll_interval)
+        return None
+
+    def wait_for_last_operation(self, pay_type: str, timeout: int = 10):
+        """
+        Универсальная точка входа: тест говорит только 'debit' или 'credit',
+        а клиент сам выбирает нужную таблицу.
+        """
+        if pay_type == "credit":
+            return self.wait_for_last_credit(timeout=timeout)
+        return self.wait_for_last_payment(timeout=timeout)
 
     def close(self):
         if self.connection is not None:

@@ -212,7 +212,7 @@ class TestPayment:
         "но UI показывает 'Успешно / Операция одобрена Банком'. "
         "Оформлено как xfail"
     )
-    def test_declined_debit_payment(self, base_url, pay_type):
+    def test_declined_debit_payment(self, driver, base_url, pay_type):
         """Карта DECLINED - на UI ошибка, в БД статус DECLINED."""
         page = PurchasePage(driver, base_url=base_url)
         page.open()
@@ -229,7 +229,7 @@ class TestPayment:
             f"[{pay_type}] Ожидалось уведомление об ошибке, получили: {notification!r}"
         # Проверка БД (опционально)
         with DBClient() as db:
-            last = db.wait_for_last_operation(timeout=10)
+            last = db.wait_for_last_operation(pay_type, timeout=10)
             assert last is not None, f"[{pay_type}] В БД не появилась запись о платеже"
             assert last["status"] == "DECLINED", \
                 f"Ожидался статус DECLINED, получили {last['status']!r}"
