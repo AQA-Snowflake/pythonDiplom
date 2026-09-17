@@ -156,8 +156,8 @@ class TestPayment:
         assert not page.has_field_errors(), "Есть ошибки валидации при корректном владельце"
         assert page.get_owner_value() == "Valeria Petrovna"
 
-    @allure.title("Баг: Поле 'Владелец' пропускает кириллицу")
-    @pytest.mark.xfail(reason="Баг: поле Владелец пропускает кириллицу")
+    @allure.title("Поле 'Владелец' пропускает кириллицу")
+    @pytest.mark.xfail(reason="поле Владелец пропускает кириллицу")
     def test_invalid_owner_cyrillic(self, driver):
         """Кириллица в поле 'Владелец' должна отклоняться — сейчас пропускается."""
         page = PurchasePage(driver)
@@ -182,8 +182,8 @@ class TestPayment:
         assert page.get_field_value("999") == "567"
 
 
-    @allure.title("Баг: Валидация CVC не проверяет длину")
-    @pytest.mark.xfail(reason="Баг: валидация CVC не проверяет длину")
+    @allure.title("Валидация CVC не проверяет длину")
+    @pytest.mark.xfail(reason="валидация CVC не проверяет длину")
     # декоратор
     def test_invalid_cvc_too_short(self, driver):
         """CVC из 2 цифр должен отклоняться — сейчас пропускается."""
@@ -204,7 +204,7 @@ class TestPayment:
         "но UI показывает 'Успешно / Операция одобрена Банком'. "
         "Оформлено как xfail"
     )
-    @pytest.mark.xfail(reason="Баг: declined-карта 4442 отображает успех вместо отказа")
+    @pytest.mark.xfail(reason="declined-карта 4442 отображает успех вместо отказа")
     def test_declined_debit_payment(self, driver):
         """Карта DECLINED - на UI ошибка, в БД статус DECLINED."""
         page = PurchasePage(driver)
