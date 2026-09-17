@@ -44,13 +44,17 @@ class TestPayment:
     закрывает после.
     """
 
-    # P001: Проверка успешного платежа дебетовой картой с проверкой уведомлений в БД
-    @allure.title("Успешная оплата дебетовой картой")
-    @allure.description("Проверяет полный happy path: заполнение формы валидными данными, отправка, успешное уведомление на UI и статус APPROVED в БД.")
-    def test_successful_debit_payment(self, driver, base_url):
+    # P001: Проверка успешного платежа дебетовой картой+кредитной картой с проверкой уведомлений в БД
+    @pytest.mark.parametrize("pay_type", ["debit", "credit"])
+    @allure.title("Успешная оплата ({pay_type})")
+    @allure.description("Проверяет happy path для debit и credit: заполнение формы, отправка, "
+        "успешное уведомление на UI и статус APPROVED в соответствующей таблице БД."
+    )
+    def test_successful_debit_payment(self, driver, base_url, pay_type):
         page = PurchasePage(driver, base_url=base_url)
         page.open()
-        page.click_buy_button()
+        # Выбор вкладки
+        page.select_payment_type(pay_type)
         # Валидный номер карты (approved) из data.json
         page.fill_card_fields(CARD_APPROVED, "12", future_year(), "Valeria Petrovna", "123")
         page.submit_form()
@@ -62,12 +66,12 @@ class TestPayment:
         assert "Операция одобрена Банком" in notification, \
             f"Ожидалось 'Операция одобрена Банком', получили: {notification!r}"
 
-        # Проверяем БД: последний платёж должен быть APPROVED
+        # Проверяем БД
         with DBClient() as db:
-            last_payment = db.wait_for_last_payment(timeout=10)
-            assert last_payment is not None, "В БД не появилась запись о платеже"
-            assert last_payment["status"] == "APPROVED", \
-                f"Ожидался статус APPROVED, получили {last_payment['status']!r}"
+            last = db.wait_for_last_operation(pay_type, timeout=10)
+            assert last is not None, "В БД не появилась запись о платеже"
+            assert last["status"] == "APPROVED", \
+                f"Ожидался статус APPROVED, получили {last['status']!r}"
 
     # P002: Валидация номера карты
     @allure.title("Валидация: Корректный формат номера карты 16-значный")
@@ -93,16 +97,19 @@ class TestPayment:
         assert "Неверный формат" in error or "заполнено" in error, \
             f"Ожидалась ошибка формата, получили: {error!r}"
 
-    @allure.title("Валидация: Пустое поле номера карты")
-    def test_empty_card_number(self, driver):
-        page = PurchasePage(driver)
+    @pytest.mark.parametrize("pay_type", ["debit", "credit"])
+    @allure.title("Валидация: Пустое поле номера карты ({pay_type})")
+    def test_empty_card_number(self, driver, base_url, pay_type):
+        page = PurchasePage(driver, base_url=base_url)
         page.open()
-        page.click_buy_button()
+        page.select_payment_type(pay_type)
         page.fill_card_fields("", "12", future_year(), "Valeria Petrovna", "123")
         page.submit_form()
-        assert not page.is_form_submitted(), "Форма отправилась, хотя поле пустое"
+        assert not page.is_form_submitted(), \
+            f"[{pay_type}] Форма отправилась, хотя поле пустое"
         error = page.get_field_error("Номер карты")
-        assert "Неверный формат" in error
+        assert "Неверный формат" in error, \
+                f"[{pay_type}] Ожидалась ошибка формата, получили: {error!r}"
 
     # P003: Валидация месяца, года
     @allure.title("Валидация: Корректный месяц (09)")
@@ -197,33 +204,35 @@ class TestPayment:
         assert "заполнено" in error or "3 цифры" in error
 
     # P006: Отклоненная оплата
-    @allure.title("Отклоненная оплата дебетовой картой")
+    @pytest.mark.parametrize("pay_type", ["debit", "credit"])
+    @pytest.mark.xfail(reason="declined-карта 4442 отображает успех вместо отказа")
+    @allure.title("Отклоненная оплата ({pay_type})")
     @allure.description(
-        "приложение показывает success для declined-карты"
         "Карта 4444 4444 4444 4442 должна получать отказ банка, "
         "но UI показывает 'Успешно / Операция одобрена Банком'. "
         "Оформлено как xfail"
     )
-    @pytest.mark.xfail(reason="declined-карта 4442 отображает успех вместо отказа")
-    def test_declined_debit_payment(self, driver):
+    def test_declined_debit_payment(self, base_url, pay_type):
         """Карта DECLINED - на UI ошибка, в БД статус DECLINED."""
-        page = PurchasePage(driver)
+        page = PurchasePage(driver, base_url=base_url)
         page.open()
-        page.click_buy_button()
+        page.select_payment_type(pay_type)
         # Номер карты из data.json со статусом declined (например, "4444 4444 4444 4442")
         page.fill_card_fields(CARD_DECLINED, "12", future_year(), "Valeria Petrovna", "123")
         page.submit_form()
 
         # Ждём именно error-уведомление (не ok!)
         notification = page.wait_for_error_notification(timeout=5)
-        assert "Ошибка" in notification or "Declined" in notification or "отклонен" in notification.lower(), \
-            f"Ожидалось уведомление об ошибке, получили: {notification!r}"
+        assert ("Ошибка" in notification
+                or "Declined" in notification
+                or "отклонен" in notification.lower()), \
+            f"[{pay_type}] Ожидалось уведомление об ошибке, получили: {notification!r}"
         # Проверка БД (опционально)
         with DBClient() as db:
-            last_payment = db.wait_for_last_payment(timeout=10)
-            assert last_payment is not None, "В БД не появилась запись о платеже"
-            assert last_payment["status"] == "DECLINED", \
-                f"Ожидался статус DECLINED, получили {last_payment['status']!r}"
+            last = db.wait_for_last_operation(timeout=10)
+            assert last is not None, f"[{pay_type}] В БД не появилась запись о платеже"
+            assert last["status"] == "DECLINED", \
+                f"Ожидался статус DECLINED, получили {last['status']!r}"
 
     # P007: Кнопка "Купить в кредит"
     @allure.title("Переключение на вкладку 'Купить в кредит'")
